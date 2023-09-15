@@ -105,7 +105,7 @@ class _BottomPageState extends State<BottomPage> {
                   );
                 case 4:
                   return CupertinoPageScaffold(
-                    child: ProfileScreen(),
+                    child: MyUploadsScreen(),
                   );
                 default:
                   return CupertinoPageScaffold(

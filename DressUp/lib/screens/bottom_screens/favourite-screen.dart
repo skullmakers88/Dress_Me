@@ -4,7 +4,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-import '../product_detail_screen.dart';
+// Create a class to represent an outfit
+class OutfitModel {
+  final String id;
+  String name;
+  String imageUrl;
+  final List<String> productIds;
+
+  OutfitModel({
+    required this.id,
+    required this.name,
+    required this.imageUrl,
+    required this.productIds,
+  });
+}
 
 class FavouriteScreen extends StatefulWidget {
   const FavouriteScreen({Key? key}) : super(key: key);
@@ -18,13 +31,13 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
 
   Future<void> _getId() async {
     final snapshot = await FirebaseFirestore.instance
-        .collection('favourite')
+        .collection('favorite_outfits')
         .doc(FirebaseAuth.instance.currentUser!.uid)
         .collection('items')
         .get();
 
     setState(() {
-      ids = snapshot.docs.map((doc) => doc['pid'].toString()).toList();
+      ids = snapshot.docs.map((doc) => doc.id).toList();
     });
   }
 
@@ -54,36 +67,41 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
             onRefresh: _refreshData,
             child: Center(
               child: StreamBuilder(
-                stream: FirebaseFirestore.instance.collection('products').snapshots(),
+                stream: FirebaseFirestore.instance.collection('favorite_outfits')
+                    .doc(FirebaseAuth.instance.currentUser!.uid)
+                    .collection('items')
+                    .snapshots(),
                 builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
                   if (!snapshot.hasData) {
                     return CircularProgressIndicator();
                   }
 
-                  final favoriteProducts = snapshot.data!.docs
-                      .where((element) => ids.contains(element["id"].toString()))
+                  final favoriteOutfits = snapshot.data!.docs
+                      .map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return OutfitModel(
+                      id: doc.id,
+                      name: data['name'] ?? '', // Name is optional, set to empty string if null
+                      imageUrl: data['imageUrl'] ?? '', // Image URL is optional, set to empty string if null
+                      productIds: List<String>.from(data['productIds'] ?? []),
+                    );
+                  })
                       .toList();
 
-                  if (favoriteProducts.isEmpty) {
-                    return Center(child: Text("No Favorite Items Found"));
+                  if (favoriteOutfits.isEmpty) {
+                    return Center(child: Text("No Favorite Outfits Found"));
                   }
 
-                  return ListView.builder(
-                    itemCount: favoriteProducts.length,
+                  return  ListView.builder(
+                    itemCount: favoriteOutfits.length,
                     itemBuilder: (BuildContext context, int index) {
-                      final product = favoriteProducts[index];
+                      final outfit = favoriteOutfits[index];
                       return Padding(
                         padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 0.7.h),
                         child: InkWell(
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ProductDetailScreen(
-                                  id: product['id'],
-                                ),
-                              ),
-                            );
+                            // Implement navigation to view outfit details or edit it
+                            // You can navigate to a new screen with outfit details here
                           },
                           child: Card(
                             elevation: 10.0,
@@ -93,25 +111,35 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                             color: Colors.black,
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: ListTile(
-                                leading: Image.network(
-                                  product['imageUrls'][0], // Replace with the correct field name
-                                  width: 50.0, // Adjust the size as needed
-                                  height: 50.0,
-                                ),
-                                title: Text(
-                                  product['productName'],
-                                  style: TextStyle(
-                                    color: Colors.white,
+                              child: Row(
+                                children: [
+                                  // Custom leading widget (Image)
+                                  Image.network(
+                                    outfit.imageUrl,
+                                    width: 50.0,
+                                    height: 50.0,
                                   ),
-                                ),
-                                trailing: IconButton(
-                                  onPressed: () {},
-                                  icon: Icon(
-                                    Icons.navigate_next_outlined,
-                                    color: Colors.white,
+                                  SizedBox(width: 10.0), // Adjust spacing as needed
+                                  // Custom title widget (Text)
+                                  Expanded(
+                                    child: Text(
+                                      outfit.name,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  // Custom trailing widget (IconButton)
+                                  IconButton(
+                                    onPressed: () {
+                                      // Implement actions for the outfit (e.g., view, edit, delete)
+                                    },
+                                    icon: Icon(
+                                      Icons.navigate_next_outlined,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -119,6 +147,7 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                       );
                     },
                   );
+
                 },
               ),
             ),
@@ -128,4 +157,3 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
     );
   }
 }
-

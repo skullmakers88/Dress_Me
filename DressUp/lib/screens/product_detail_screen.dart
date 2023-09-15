@@ -126,8 +126,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                           child: CachedNetworkImage(
                             imageUrl: currentProduct!.imageUrls != null
-                                ? currentProduct!.imageUrls![index]
-                            as String
+                                ? currentProduct!.imageUrls![index] as String
                                 : "",
                             height: 9.h,
                             width: 9.w,
@@ -252,65 +251,69 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 scrollDirection: Axis.horizontal,
                 itemCount: allProducts.length,
                 itemBuilder: (BuildContext context, int index) {
-                  final otherProduct = allProducts[index];
+                  if (index >= 0 && index < allProducts.length) {
+                    final otherProduct = allProducts[index];
 
-                  // Check if the current product's categories are not in the other product's categories
-                  if (otherProduct.id != widget.id &&
-                      (otherProduct.categories == null ||
-                          !otherProduct.categories!
-                              .any((category) => currentProduct!.categories!.contains(category)))) {
-                    return InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProductDetailScreen(
-                              id: otherProduct.id,
+                    if (otherProduct.id != widget.id &&
+                        (otherProduct.categories == null ||
+                            !otherProduct.categories!
+                                .any((category) =>
+                                currentProduct!.categories!
+                                    .contains(category)))) {
+                      return InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProductDetailScreen(
+                                id: otherProduct.id,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  child: CachedNetworkImage(
+                                    imageUrl: otherProduct.imageUrls != null
+                                        ? otherProduct.imageUrls!.last as String
+                                        : "",
+                                    height: 100,
+                                    width: 100,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    otherProduct.productName ?? "",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        );
-                      },
-                      child: Container(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.black,
-                                  ),
-                                ),
-                                child: CachedNetworkImage(
-                                  imageUrl: otherProduct.imageUrls != null
-                                      ? otherProduct.imageUrls!.last as String
-                                      : "",
-                                  height: 100,
-                                  width: 100,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  otherProduct.productName ?? "",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
-                      ),
-                    );
+                      );
+                    } else {
+                      return Container();
+                    }
                   } else {
                     return Container();
                   }
                 },
               ),
             ),
-
           ],
         ),
       ),

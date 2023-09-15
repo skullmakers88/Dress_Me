@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../models/categoryModel.dart';
 import '../../models/productsModel.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 
 class ProductScreen extends StatefulWidget {
   String? category;
@@ -36,6 +34,8 @@ class _ProductScreenState extends State<ProductScreen> {
         .then((QuerySnapshot? snapshot) {
       if (snapshot != null) {
         setState(() {
+          // Clear the totalItems list before updating it
+          totalItems.clear();
           allProducts = snapshot.docs.map((e) {
             return Products(
               id: e["id"],
@@ -45,10 +45,12 @@ class _ProductScreenState extends State<ProductScreen> {
             );
           }).toList();
           isLoading = false;
+          totalItems.addAll(allProducts); // Store all products in totalItems
         });
       }
     });
   }
+
 
   filterData(String query) {
     setState(() {
@@ -58,11 +60,11 @@ class _ProductScreenState extends State<ProductScreen> {
               .toLowerCase()
               .contains(query.toLowerCase());
 
-          final categoryMatches =
-          selectedCategories.isEmpty || product.categories != null
-              ? product.categories!.any(
-                  (category) => selectedCategories.contains(category))
-              : false;
+          final categoryMatches = selectedCategories.isEmpty ||
+              selectedCategories.contains("All") ||
+              (product.categories != null &&
+                  product.categories!.any((category) =>
+                      selectedCategories.contains(category)));
 
           return productNameMatches && categoryMatches;
         }).toList();
@@ -74,8 +76,6 @@ class _ProductScreenState extends State<ProductScreen> {
       }
     });
   }
-
-
 
 
   List<Products> get filteredProducts {
@@ -98,18 +98,21 @@ class _ProductScreenState extends State<ProductScreen> {
         children: [
           Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(15.0),
-                // child: TextFormField(
-                //   controller: sC,
-                //   onChanged: (v) {
-                //     filterData(sC.text);
-                //   },
-                //   decoration: InputDecoration(
-                //     hintText: "Search your favorite product...",
-                //     border: OutlineInputBorder(),
-                //   ),
-                // ),
+              Container(
+                padding: EdgeInsets.only(top: 20.0), // Increase the top padding as needed
+                child: Padding(
+                  padding: const EdgeInsets.all(15.0),
+                  child: TextFormField(
+                    controller: sC,
+                    onChanged: (v) {
+                      filterData(sC.text);
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Search your favorite product...",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -129,58 +132,67 @@ class _ProductScreenState extends State<ProductScreen> {
                 ),
               ),
               Expanded(
-                child: ListView.builder(
-                  itemCount: filteredProducts.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    return InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProductDetailScreen(
-                              id: filteredProducts[index].id,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.black),
-                              ),
-                              child: Row(
-                                children: filteredProducts[index].imageUrls!
-                                    .map((imageUrl) => Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(4.0),
-                                    child: Image.network(
-                                      imageUrl,
-                                      height: 100,
-                                      width: 100,
-                                      fit: BoxFit.cover,
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    await getDate();
+                  },
+                  child: Builder(
+                    builder: (context) {
+                      return ListView.builder(
+                        itemCount: filteredProducts.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          return InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ProductDetailScreen(
+                                    id: filteredProducts[index].id,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.black),
+                                    ),
+                                    child: Row(
+                                      children: filteredProducts[index].imageUrls!
+                                          .map((imageUrl) => Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(4.0),
+                                          child: Image.network(
+                                            imageUrl,
+                                            height: 100,
+                                            width: 100,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ))
+                                          .toList(),
                                     ),
                                   ),
-                                ))
-                                    .toList(),
+                                  SizedBox(height: 8.0),
+                                  Text(
+                                    filteredProducts[index].productName!,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            SizedBox(height: 8.0),
-                            Text(
-                              filteredProducts[index].productName!,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
             ],

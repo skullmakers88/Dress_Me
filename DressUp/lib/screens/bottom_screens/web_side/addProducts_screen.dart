@@ -5,6 +5,7 @@ import 'package:eco_buy/models/productsModel.dart';
 import 'package:eco_buy/utils/styles.dart';
 import 'package:eco_buy/widgets/eco_button.dart';
 import 'package:eco_buy/widgets/ecotextfield.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Authentication
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -24,17 +25,12 @@ class AddProductScreen extends StatefulWidget {
 class _AddProductScreenState extends State<AddProductScreen> {
   TextEditingController idC = TextEditingController();
   TextEditingController productNameC = TextEditingController();
-  // TextEditingController detailC = TextEditingController();
-  // TextEditingController priceC = TextEditingController();
-  // TextEditingController discountPriceC = TextEditingController();
-  // TextEditingController serialCodeC = TextEditingController();
-  // TextEditingController brandC = TextEditingController();
 
   bool isOnSale = false;
   bool isPopular = false;
   bool isFavourite = false;
 
-  Set<String> selectedValues = {}; // Store multiple selected categories.
+  Set<String> selectedValues = {};
   bool isSaving = false;
   bool isUploading = false;
 
@@ -63,8 +59,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Wrap(
-                    spacing: 5, // Adjust spacing as needed.
-                    runSpacing: 5, // Adjust spacing as needed.
+                    spacing: 5,
+                    runSpacing: 5,
                     children: categories
                         .map((e) => FilterChip(
                       label: Text(e.title!),
@@ -92,7 +88,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     return null;
                   },
                 ),
-                // ... (other text fields)
                 EcoButton(
                   title: "PICK IMAGES",
                   onPress: () {
@@ -100,7 +95,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   },
                   isLoginButton: true,
                 ),
-                // ... (other widgets)
                 Container(
                   height: 45.h,
                   decoration: BoxDecoration(
@@ -118,14 +112,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         child: Stack(
                           children: [
                             Container(
-                              decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.black)),
-                              child: Image.network(
-                                File(images[index].path).path,
-                                height: 200,
-                                width: 200,
-                                fit: BoxFit.cover,
-                              ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.black),
+                                ),
+                                child: Image.file(
+                                  File(images[index].path),
+                                  height: 200,
+                                  width: 200,
+                                  fit: BoxFit.cover,
+                                )
                             ),
                             IconButton(
                                 onPressed: () {
@@ -176,33 +171,38 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() {
       isSaving = true;
     });
-    await uploadImages();
 
-    final List<String> selectedCategories = selectedValues.toList();
+    // Obtain the currently authenticated user's ID
+    final userId = FirebaseAuth.instance.currentUser?.uid;
 
-    await Products.addProducts(Products(
-      categories: selectedCategories,
-      id: uuid.v4(),
-      // brand: brandC.text,
-      productName: productNameC.text,
-      // detail: detailC.text,
-      // price: int.parse(priceC.text),
-      // discountPrice: int.parse(discountPriceC.text),
-      // serialCode: serialCodeC.text,
-      imageUrls: imageUrls,
-      isSale: isOnSale,
-      isPopular: isPopular,
-      isFavourite: isFavourite,
-    )).whenComplete(() {
-      setState(() {
-        isSaving = false;
-        imageUrls.clear();
-        images.clear();
-        clearFields();
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("ADDED SUCCESSFULLY")));
+    if (userId != null) {
+      await uploadImages();
+
+      final List<String> selectedCategories = selectedValues.toList();
+
+      await Products.addProducts(Products(
+        uploaderId: userId, // Assign the user's ID to the product
+        categories: selectedCategories,
+        id: uuid.v4(),
+        productName: productNameC.text,
+        imageUrls: imageUrls,
+        isSale: isOnSale,
+        isPopular: isPopular,
+        isFavourite: isFavourite,
+      )).whenComplete(() {
+        setState(() {
+          isSaving = false;
+          imageUrls.clear();
+          images.clear();
+          clearFields();
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text("ADDED SUCCESSFULLY")));
+        });
       });
-    });
+    } else {
+      // Handle the case where the user is not authenticated
+      print("User is not authenticated");
+    }
   }
 
   clearFields() {
@@ -222,29 +222,31 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
   }
 
-  Future postImages(XFile? imageFile) async {
+  Future<String?> postImages(XFile? imageFile) async {
     setState(() {
       isUploading = true;
     });
-    String? urls;
-    Reference ref =
-    FirebaseStorage.instance.ref().child("images").child(imageFile!.name);
-    if (kIsWeb) {
-      await ref.putData(
-        await imageFile.readAsBytes(),
-        SettableMetadata(contentType: "image/jpeg"),
-      );
-      urls = await ref.getDownloadURL();
-      setState(() {
-        isUploading = false;
-      });
-      return urls;
-    }
+
+    String? downloadUrl;
+
+    Reference ref = FirebaseStorage.instance.ref().child("images").child(imageFile!.name);
+
+    await ref.putData(
+      await imageFile.readAsBytes(),
+      SettableMetadata(contentType: "image/jpeg"),
+    );
+    downloadUrl = await ref.getDownloadURL();
+
+    setState(() {
+      isUploading = false;
+    });
+
+    return downloadUrl;
   }
 
   uploadImages() async {
     for (var image in images) {
-      await postImages(image).then((downLoadUrl) => imageUrls.add(downLoadUrl));
+      await postImages(image).then((downLoadUrl) => imageUrls.add(downLoadUrl!));
     }
   }
 }

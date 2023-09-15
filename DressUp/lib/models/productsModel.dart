@@ -8,6 +8,7 @@ class Products {
   String? brand;
   int? price;
   int? discountPrice;
+  String? uploaderId;
   String? serialCode;
   List<dynamic>? imageUrls;
   bool? isSale;
@@ -16,6 +17,7 @@ class Products {
 
   Products({
     this.categories,
+    this.uploaderId,
     this.id,
     this.productName,
     this.detail,
@@ -44,6 +46,7 @@ class Products {
       "isOnSale": products.isSale,
       "isPopular": products.isPopular,
       "isFavourite": products.isFavourite,
+      "uploaderId":products.uploaderId,
     };
     await db.add(data);
   }

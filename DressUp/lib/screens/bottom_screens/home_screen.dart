@@ -110,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              const CategoryHomeBoxes(),
+              // const CategoryHomeBoxes(),
               Container(
                 // height: .h,
                 child: SingleChildScrollView(
@@ -192,7 +192,7 @@ class TrendingOutfits extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 47.h, // Adjust the height as needed
+      height: 63.h, // Adjust the height as needed
       child: SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: Column(
